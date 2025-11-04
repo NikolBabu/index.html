@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gotoeat - Co je teď otevřeno?</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .current-time {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        select, input[type="checkbox"] {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select:hover, select:focus {
+            border-color: #764ba2;
+            outline: none;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        .near-me-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .near-me-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .near-me-btn:active {
+            transform: translateY(0);
+        }
+
+        .near-me-btn.loading {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
+
+        .location-status {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .location-status.show {
+            display: block;
+        }
+
+        .location-status.error {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .location-status.success {
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .stats {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .restaurants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .restaurant-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .restaurant-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .restaurant-card.closed {
+            opacity: 0.6;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .status-badge.open {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-badge.closed {
+            background: #6b7280;
+            color: white;
+        }
+
+        .distance-badge {
+            position: absolute;
+            top: 55px;
+            right: 15px;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 11px;
+            background: #3b82f6;
+            color: white;
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+        }
+
+        .restaurant-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+        }
+
+        .restaurant-name {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .restaurant-type {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        .restaurant-body {
+            padding: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+
+        .info-icon {
+            font-size: 1.2em;
+            min-width: 25px;
+        }
+
+        .info-content {
+            flex: 1;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+
+        .info-text {
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .price-indicator {
+            display: inline-block;
+            color: #10b981;
+            font-size: 1.2em;
+            font-weight: 700;
+        }
+
+        .menu-item {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .menu-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .menu-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .menu-price {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .opening-hours {
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .today-hours {
+            font-weight: 700;
+            color: #667eea;
+            background: #f3f4f6;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .no-results {
+            text-align: center;
+            color: white;
+            font-size: 1.5em;
+            padding: 60px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .restaurants-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 5px;
+            }
+
+            select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍽️ Gotoeat</h1>
+            <div class="current-time" id="currentTime"></div>
+        </header>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label for="typeFilter">Typ kuchyně:</label>
+                <select id="typeFilter">
+                    <option value="all">Všechny</option>
+                    <option value="česká">Česká</option>
+                    <option value="italská">Italská</option>
+                    <option value="asijská">Asijská</option>
+                    <option value="vegetariánská">Vegetariánská</option>
+                    <option value="burger">Burger</option>
+                    <option value="mezinárodní">Mezinárodní</option>
+                    <option value="francouzská">Francouzská</option>
+                    <option value="fast food">Fast Food</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="priceFilter">Cenová kategorie:</label>
+                <select id="priceFilter">
+                    <option value="all">Všechny</option>
+                    <option value="€">€ (150-250 Kč)</option>
+                    <option value="€€">€€ (250-400 Kč)</option>
+                    <option value="€€€">€€€ (400+ Kč)</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="areaFilter">Oblast:</label>
+                <select id="areaFilter">
+                    <option value="all">Všechny</option>
+                    <option value="centrum - Česká">Centrum - Česká ulice</option>
+                    <option value="centrum - blízko Česká">Centrum - blízko Česká</option>
+                    <option value="centrum - Orlí">Centrum - Orlí</option>
+                    <option value="centrum - Minoritská">Centrum - Minoritská</option>
+                    <option value="centrum - Dominikánská">Centrum - Dominikánská</option>
+                    <option value="centrum - Zelný trh">Centrum - Zelný trh</option>
+                    <option value="centrum - Mečová">Centrum - Mečová</option>
+                    <option value="centrum - Solniční">Centrum - Solniční</option>
+                    <option value="veveří">Veveří</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <input type="checkbox" id="openNowFilter">
+                <label for="openNowFilter">Pouze otevřené</label>
+            </div>
+
+            <div class="filter-group">
+                <button id="nearMeBtn" class="near-me-btn">
+                    📍 Najít nejbližší
+                </button>
+            </div>
+        </div>
+
+        <div id="locationStatus" class="location-status"></div>
+
+        <div class="stats" id="stats"></div>
+
+        <div class="restaurants-grid" id="restaurantsGrid"></div>
+    </div>
+
+    <script>
+        const restaurants = [
+            {
+                name: "Noodle House",
+                type: "asijská",
+                area: "centrum - Česká",
+                address: "Česká 12, Brno",
+                coordinates: { lat: 49.1930, lng: 16.6110 },
+                price: "€",
+                priceRange: "120-200 Kč",
+                phone: "+420 604 123 456",
+                hours: {
+                    1: "11:00-21:00", 2: "11:00-21:00", 3: "11:00-21:00",
+                    4: "11:00-21:00", 5: "11:00-22:00", 6: "12:00-22:00", 0: "12:00-21:00"
+                },
+                menu: [
+                    { name: "Pho Bo", price: "145 Kč" },
+                    { name: "Pad Thai", price: "135 Kč" },
+                    { name: "Chow Mein", price: "125 Kč" }
+                ]
+            },
+            {
+                name: "Pivnice Pegas",
+                type: "česká",
+                area: "centrum - Česká",
+                address: "Jakubská 4, Brno",
+                coordinates: { lat: 49.1944, lng: 16.6103 },
+                price: "€€",
+                priceRange: "200-350 Kč",
+                phone: "+420 542 210 104",
+                hours: {
+                    1: "11:00-23:00", 2: "11:00-23:00", 3: "11:00-23:00",
+                    4: "11:00-23:00", 5: "11:00-00:00", 6: "11:00-00:00", 0: "11:00-23:00"
+                },
+                menu: [
+                    { name: "Vepřové koleno", price: "245 Kč" },
+                    { name: "Guláš s knedlíkem", price: "175 Kč" },
+                    { name: "Smažený sýr", price: "145 Kč" }
+                ]
+            },
+            {
+                name: "Café Restaurant Savoy",
+                type: "mezinárodní",
+                area: "centrum - Česká",
+                address: "Náměstí Svobody 13, Brno",
+                coordinates: { lat: 49.1950, lng: 16.6088 },
+                price: "€€",
+                priceRange: "250-400 Kč",
+                phone: "+420 515 570 520",
+                hours: {
+                    1: "09:00-22:00", 2: "09:00-22:00", 3: "09:00-22:00",
+                    4: "09:00-22:00", 5: "09:00-23:00", 6: "09:00-23:00", 0: "09:00-22:00"
+                },
+                menu: [
+                    { name: "Kuřecí steak", price: "265 Kč" },
+                    { name: "Caesar salát", price: "195 Kč" },
+                    { name: "Hovězí burger", price: "225 Kč" }
+                ]
+            },
+            {
+                name: "Koishi Sushi Bar",
+                type: "asijská",
+                area: "centrum - Česká",
+                address: "Jakubská 1, Brno",
+                coordinates: { lat: 49.1948, lng: 16.6107 },
+                price: "€€",
+                priceRange: "250-450 Kč",
+                phone: "+420 775 344 466",
+                hours: {
+                    1: "11:30-22:00", 2: "11:30-22:00", 3: "11:30-22:00",
+                    4: "11:30-22:00", 5: "11:30-23:00", 6: "12:00-23:00", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Sushi set (24ks)", price: "399 Kč" },
+                    { name: "Ramen", price: "245 Kč" },
+                    { name: "Gyoza (8ks)", price: "155 Kč" }
+                ]
+            },
+            {
+                name: "Burger House",
+                type: "burger",
+                area: "centrum - Česká",
+                address: "Rašínova 8, Brno",
+                coordinates: { lat: 49.1925, lng: 16.6115 },
+                price: "€",
+                priceRange: "150-250 Kč",
+                phone: "+420 777 123 456",
+                hours: {
+                    1: "11:00-22:00", 2: "11:00-22:00", 3: "11:00-22:00",
+                    4: "11:00-22:00", 5: "11:00-23:00", 6: "11:00-23:00", 0: "12:00-22:00"
+                },
+                menu: [
+                    { name: "Classic Beef Burger", price: "169 Kč" },
+                    { name: "Bacon BBQ Burger", price: "195 Kč" },
+                    { name: "Chicken Burger", price: "159 Kč" }
+                ]
+            },
+            {
+                name: "La Bouchée",
+                type: "francouzská",
+                area: "centrum - Dominikánská",
+                address: "Dominikánská 4, Brno",
+                coordinates: { lat: 49.1925, lng: 16.6095 },
+                price: "€€€",
+                priceRange: "450-800 Kč",
+                phone: "+420 515 545 454",
+                hours: {
+                    1: "Zavřeno", 2: "Zavřeno", 3: "17:30-23:00",
+                    4: "17:30-23:00", 5: "17:30-00:00", 6: "17:30-00:00", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Hovězí tatarák", price: "285 Kč" },
+                    { name: "Confit de canard", price: "495 Kč" },
+                    { name: "Tasting menu", price: "1290 Kč" }
+                ]
+            },
+            {
+                name: "Pizza Coloseum",
+                type: "italská",
+                area: "centrum - Česká",
+                address: "Veselá 5, Brno",
+                coordinates: { lat: 49.1935, lng: 16.6098 },
+                price: "€",
+                priceRange: "150-280 Kč",
+                phone: "+420 542 213 569",
+                hours: {
+                    1: "11:00-22:00", 2: "11:00-22:00", 3: "11:00-22:00",
+                    4: "11:00-22:00", 5: "11:00-23:00", 6: "11:00-23:00", 0: "12:00-22:00"
+                },
+                menu: [
+                    { name: "Pizza Margherita", price: "155 Kč" },
+                    { name: "Pizza Quattro Formaggi", price: "185 Kč" },
+                    { name: "Spaghetti Carbonara", price: "165 Kč" }
+                ]
+            },
+            {
+                name: "Lokál U Caipla",
+                type: "česká",
+                area: "centrum - blízko Česká",
+                address: "Běhounská 15, Brno",
+                coordinates: { lat: 49.1952, lng: 16.6084 },
+                price: "€€",
+                priceRange: "250-400 Kč",
+                phone: "+420 515 515 525",
+                hours: {
+                    1: "11:00-23:00", 2: "11:00-23:00", 3: "11:00-23:00",
+                    4: "11:00-23:00", 5: "11:00-00:00", 6: "11:00-00:00", 0: "11:00-22:00"
+                },
+                menu: [
+                    { name: "Svíčková na smetaně", price: "195 Kč" },
+                    { name: "Řízek s bramborovým salátem", price: "175 Kč" },
+                    { name: "Guláš s knedlíkem", price: "165 Kč" }
+                ]
+            },
+            {
+                name: "Špalíček",
+                type: "česká",
+                area: "centrum - Zelný trh",
+                address: "Zelný trh 12, Brno",
+                coordinates: { lat: 49.1916, lng: 16.6082 },
+                price: "€€",
+                priceRange: "200-350 Kč",
+                phone: "+420 542 211 526",
+                hours: {
+                    1: "10:00-22:00", 2: "10:00-22:00", 3: "10:00-22:00",
+                    4: "10:00-22:00", 5: "10:00-23:00", 6: "10:00-23:00", 0: "10:00-22:00"
+                },
+                menu: [
+                    { name: "Moravský vrabec", price: "235 Kč" },
+                    { name: "Pečená kachna", price: "265 Kč" },
+                    { name: "Halušky", price: "185 Kč" }
+                ]
+            },
+            {
+                name: "Café Restaurant Morgal",
+                type: "vegetariánská",
+                area: "centrum - Česká",
+                address: "Jakubská 7, Brno",
+                coordinates: { lat: 49.1943, lng: 16.6099 },
+                price: "€",
+                priceRange: "140-220 Kč",
+                phone: "+420 608 123 789",
+                hours: {
+                    1: "09:00-20:00", 2: "09:00-20:00", 3: "09:00-20:00",
+                    4: "09:00-20:00", 5: "09:00-21:00", 6: "10:00-21:00", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Buddha bowl", price: "155 Kč" },
+                    { name: "Vegan burger", price: "165 Kč" },
+                    { name: "Quinoa salát", price: "145 Kč" }
+                ]
+            },
+            {
+                name: "Rebio",
+                type: "vegetariánská",
+                area: "centrum - blízko Česká",
+                address: "Mečová 2, Brno",
+                coordinates: { lat: 49.1920, lng: 16.6078 },
+                price: "€",
+                priceRange: "130-200 Kč",
+                phone: "+420 515 537 164",
+                hours: {
+                    1: "11:00-20:00", 2: "11:00-20:00", 3: "11:00-20:00",
+                    4: "11:00-20:00", 5: "11:00-20:00", 6: "Zavřeno", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Tofu na zelenině s rýží", price: "145 Kč" },
+                    { name: "Falafel wrap", price: "125 Kč" },
+                    { name: "Quinoa salát", price: "135 Kč" }
+                ]
+            },
+            {
+                name: "Pavilon",
+                type: "mezinárodní",
+                area: "centrum - blízko Česká",
+                address: "Jezuitská 6, Brno",
+                coordinates: { lat: 49.1941, lng: 16.6072 },
+                price: "€€€",
+                priceRange: "400-700 Kč",
+                phone: "+420 515 537 711",
+                hours: {
+                    1: "Zavřeno", 2: "17:00-23:00", 3: "17:00-23:00",
+                    4: "17:00-23:00", 5: "17:00-00:00", 6: "17:00-00:00", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Steak z pravé svíčkové", price: "495 Kč" },
+                    { name: "Grilovaný losos", price: "395 Kč" },
+                    { name: "Degustační menu", price: "890 Kč" }
+                ]
+            },
+            {
+                name: "Bistro Franz",
+                type: "mezinárodní",
+                area: "veveří",
+                address: "Údolní 11, Brno",
+                coordinates: { lat: 49.1965, lng: 16.5989 },
+                price: "€",
+                priceRange: "150-250 Kč",
+                phone: "+420 777 888 999",
+                hours: {
+                    1: "09:00-20:00", 2: "09:00-20:00", 3: "09:00-20:00",
+                    4: "09:00-20:00", 5: "09:00-20:00", 6: "10:00-18:00", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Club sandwich", price: "145 Kč" },
+                    { name: "Caesar salát s kuřetem", price: "165 Kč" },
+                    { name: "Hovězí burger s hranolky", price: "185 Kč" }
+                ]
+            },
+            {
+                name: "BASTA Pasta & Pizza",
+                type: "italská",
+                area: "centrum - blízko Česká",
+                address: "Orlí 22, Brno",
+                coordinates: { lat: 49.1936, lng: 16.6089 },
+                price: "€€",
+                priceRange: "200-350 Kč",
+                phone: "+420 739 634 111",
+                hours: {
+                    1: "11:00-22:00", 2: "11:00-22:00", 3: "11:00-22:00",
+                    4: "11:00-22:00", 5: "11:00-23:00", 6: "11:00-23:00", 0: "12:00-22:00"
+                },
+                menu: [
+                    { name: "Pizza Diavola", price: "189 Kč" },
+                    { name: "Spaghetti Carbonara", price: "189 Kč" },
+                    { name: "Lasagne Bolognese", price: "199 Kč" }
+                ]
+            },
+            {
+                name: "Vietnam Restaurant",
+                type: "asijská",
+                area: "centrum - Česká",
+                address: "Rašínova 4, Brno",
+                coordinates: { lat: 49.1928, lng: 16.6108 },
+                price: "€",
+                priceRange: "100-180 Kč",
+                phone: "+420 602 555 444",
+                hours: {
+                    1: "10:30-21:00", 2: "10:30-21:00", 3: "10:30-21:00",
+                    4: "10:30-21:00", 5: "10:30-21:30", 6: "11:00-21:30", 0: "11:00-21:00"
+                },
+                menu: [
+                    { name: "Pho Bo", price: "125 Kč" },
+                    { name: "Smažená rýže", price: "105 Kč" },
+                    { name: "Kuře s kešu", price: "135 Kč" }
+                ]
+            },
+            {
+                name: "Štatl",
+                type: "česká",
+                area: "centrum - Minoritská",
+                address: "Minoritská 1, Brno",
+                coordinates: { lat: 49.1923, lng: 16.6087 },
+                price: "€€",
+                priceRange: "200-350 Kč",
+                phone: "+420 542 211 030",
+                hours: {
+                    1: "11:00-23:00", 2: "11:00-23:00", 3: "11:00-23:00",
+                    4: "11:00-23:00", 5: "11:00-00:00", 6: "11:00-00:00", 0: "11:00-23:00"
+                },
+                menu: [
+                    { name: "Vepřová panenka", price: "245 Kč" },
+                    { name: "Hovězí svíčková", price: "265 Kč" },
+                    { name: "Kuřecí supreme", price: "215 Kč" }
+                ]
+            },
+            {
+                name: "Toman",
+                type: "česká",
+                area: "centrum - Orlí",
+                address: "Orlí 17, Brno",
+                coordinates: { lat: 49.1938, lng: 16.6085 },
+                price: "€€",
+                priceRange: "250-400 Kč",
+                phone: "+420 777 715 763",
+                hours: {
+                    1: "11:30-22:00", 2: "11:30-22:00", 3: "11:30-22:00",
+                    4: "11:30-22:00", 5: "11:30-23:00", 6: "11:30-23:00", 0: "11:30-22:00"
+                },
+                menu: [
+                    { name: "Vepřové koleno", price: "285 Kč" },
+                    { name: "Utopenec s cibulí", price: "95 Kč" },
+                    { name: "Svíčková", price: "215 Kč" }
+                ]
+            },
+            {
+                name: "Buddha",
+                type: "asijská",
+                area: "centrum - blízko Česká",
+                address: "Kobližná 10, Brno",
+                coordinates: { lat: 49.1927, lng: 16.6092 },
+                price: "€",
+                priceRange: "120-200 Kč",
+                phone: "+420 737 267 776",
+                hours: {
+                    1: "11:00-21:00", 2: "11:00-21:00", 3: "11:00-21:00",
+                    4: "11:00-21:00", 5: "11:00-22:00", 6: "11:00-22:00", 0: "12:00-21:00"
+                },
+                menu: [
+                    { name: "Spring rolls (4ks)", price: "95 Kč" },
+                    { name: "Tom Yum polévka", price: "115 Kč" },
+                    { name: "Pad Thai", price: "145 Kč" }
+                ]
+            },
+            {
+                name: "U Richarda",
+                type: "česká",
+                area: "centrum - Dominikánská",
+                address: "Dominikánská 7, Brno",
+                coordinates: { lat: 49.1922, lng: 16.6098 },
+                price: "€",
+                priceRange: "130-220 Kč",
+                phone: "+420 542 213 672",
+                hours: {
+                    1: "11:00-22:00", 2: "11:00-22:00", 3: "11:00-22:00",
+                    4: "11:00-22:00", 5: "11:00-23:00", 6: "11:00-23:00", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Smažený sýr s tatarkou", price: "135 Kč" },
+                    { name: "Kuřecí řízek s bramborovou kaší", price: "155 Kč" },
+                    { name: "Vepřová krkovice na grilu", price: "165 Kč" }
+                ]
+            },
+            {
+                name: "Spolková restaurace",
+                type: "česká",
+                area: "centrum - Orlí",
+                address: "Orlí 22, Brno",
+                coordinates: { lat: 49.1937, lng: 16.6090 },
+                price: "€€",
+                priceRange: "200-350 Kč",
+                phone: "+420 543 235 340",
+                hours: {
+                    1: "11:00-23:00", 2: "11:00-23:00", 3: "11:00-23:00",
+                    4: "11:00-23:00", 5: "11:00-00:00", 6: "11:00-00:00", 0: "11:00-22:00"
+                },
+                menu: [
+                    { name: "Tatarák", price: "195 Kč" },
+                    { name: "Vepřová kotleta", price: "235 Kč" },
+                    { name: "Krůtí steak", price: "215 Kč" }
+                ]
+            },
+            {
+                name: "Meridiana",
+                type: "italská",
+                area: "centrum - Mečová",
+                address: "Mečová 5, Brno",
+                coordinates: { lat: 49.1918, lng: 16.6075 },
+                price: "€€",
+                priceRange: "220-380 Kč",
+                phone: "+420 542 210 111",
+                hours: {
+                    1: "11:30-23:00", 2: "11:30-23:00", 3: "11:30-23:00",
+                    4: "11:30-23:00", 5: "11:30-00:00", 6: "11:30-00:00", 0: "12:00-22:00"
+                },
+                menu: [
+                    { name: "Pizza Prosciutto", price: "195 Kč" },
+                    { name: "Risotto ai funghi", price: "215 Kč" },
+                    { name: "Tagliatelle al salmone", price: "235 Kč" }
+                ]
+            },
+            {
+                name: "Slovanská restaurace",
+                type: "česká",
+                area: "centrum - Solniční",
+                address: "Solniční 15, Brno",
+                coordinates: { lat: 49.1910, lng: 16.6102 },
+                price: "€€",
+                priceRange: "250-400 Kč",
+                phone: "+420 542 321 207",
+                hours: {
+                    1: "11:00-22:00", 2: "11:00-22:00", 3: "11:00-22:00",
+                    4: "11:00-22:00", 5: "11:00-23:00", 6: "11:00-23:00", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Kachní prsa", price: "285 Kč" },
+                    { name: "Jelení medailonky", price: "345 Kč" },
+                    { name: "Hovězí guláš", price: "215 Kč" }
+                ]
+            },
+            {
+                name: "Stopkova Plzeňská pivnice",
+                type: "česká",
+                area: "centrum - Česká",
+                address: "Česká 5, Brno",
+                coordinates: { lat: 49.1933, lng: 16.6105 },
+                price: "€",
+                priceRange: "150-250 Kč",
+                phone: "+420 542 211 497",
+                hours: {
+                    1: "11:00-23:00", 2: "11:00-23:00", 3: "11:00-23:00",
+                    4: "11:00-23:00", 5: "11:00-00:00", 6: "11:00-00:00", 0: "11:00-22:00"
+                },
+                menu: [
+                    { name: "Vepřový řízek", price: "165 Kč" },
+                    { name: "Grilovaná kýta", price: "185 Kč" },
+                    { name: "Pivní guláš", price: "155 Kč" }
+                ]
+            },
+            {
+                name: "KFC Brno",
+                type: "fast food",
+                area: "centrum - blízko Česká",
+                address: "Náměstí Svobody 17, Brno",
+                coordinates: { lat: 49.1953, lng: 16.6085 },
+                price: "€",
+                priceRange: "100-200 Kč",
+                phone: "+420 800 139 339",
+                hours: {
+                    1: "09:00-22:00", 2: "09:00-22:00", 3: "09:00-22:00",
+                    4: "09:00-22:00", 5: "09:00-23:00", 6: "09:00-23:00", 0: "10:00-22:00"
+                },
+                menu: [
+                    { name: "Stripsy box", price: "129 Kč" },
+                    { name: "Twister menu", price: "149 Kč" },
+                    { name: "Bucket 10 ks", price: "299 Kč" }
+                ]
+            },
+            {
+                name: "McDonald's náměstí Svobody",
+                type: "fast food",
+                area: "centrum - blízko Česká",
+                address: "Náměstí Svobody 1, Brno",
+                coordinates: { lat: 49.1955, lng: 16.6082 },
+                price: "€",
+                priceRange: "100-200 Kč",
+                phone: "+420 542 212 804",
+                hours: {
+                    1: "07:00-23:00", 2: "07:00-23:00", 3: "07:00-23:00",
+                    4: "07:00-23:00", 5: "07:00-00:00", 6: "07:00-00:00", 0: "08:00-23:00"
+                },
+                menu: [
+                    { name: "Big Mac menu", price: "149 Kč" },
+                    { name: "McNuggets 9 ks", price: "139 Kč" },
+                    { name: "McChicken menu", price: "139 Kč" }
+                ]
+            },
+            {
+                name: "Più Restaurant & Bar",
+                type: "italská",
+                area: "centrum - blízko Česká",
+                address: "Běhounská 6, Brno",
+                coordinates: { lat: 49.1950, lng: 16.6080 },
+                price: "€€",
+                priceRange: "250-400 Kč",
+                phone: "+420 737 267 333",
+                hours: {
+                    1: "11:30-22:00", 2: "11:30-22:00", 3: "11:30-22:00",
+                    4: "11:30-22:00", 5: "11:30-23:00", 6: "11:30-23:00", 0: "12:00-21:00"
+                },
+                menu: [
+                    { name: "Pizza Napoletana", price: "215 Kč" },
+                    { name: "Penne Arrabbiata", price: "195 Kč" },
+                    { name: "Gnocchi al Gorgonzola", price: "225 Kč" }
+                ]
+            },
+            {
+                name: "Trattoria Da Gianni",
+                type: "italská",
+                area: "centrum - Orlí",
+                address: "Orlí 8, Brno",
+                coordinates: { lat: 49.1940, lng: 16.6088 },
+                price: "€€",
+                priceRange: "220-380 Kč",
+                phone: "+420 541 240 111",
+                hours: {
+                    1: "11:00-22:00", 2: "11:00-22:00", 3: "11:00-22:00",
+                    4: "11:00-22:00", 5: "11:00-23:00", 6: "11:00-23:00", 0: "12:00-22:00"
+                },
+                menu: [
+                    { name: "Carpaccio di manzo", price: "185 Kč" },
+                    { name: "Ravioli ai funghi", price: "235 Kč" },
+                    { name: "Tiramisu", price: "95 Kč" }
+                ]
+            },
+            {
+                name: "Pizzeria Bella Napoli",
+                type: "italská",
+                area: "centrum - Česká",
+                address: "Rašínova 10, Brno",
+                coordinates: { lat: 49.1926, lng: 16.6112 },
+                price: "€",
+                priceRange: "160-280 Kč",
+                phone: "+420 606 123 789",
+                hours: {
+                    1: "11:00-22:00", 2: "11:00-22:00", 3: "11:00-22:00",
+                    4: "11:00-22:00", 5: "11:00-23:00", 6: "11:00-23:00", 0: "12:00-22:00"
+                },
+                menu: [
+                    { name: "Pizza Margherita", price: "165 Kč" },
+                    { name: "Pizza Prosciutto e Funghi", price: "195 Kč" },
+                    { name: "Calzone", price: "185 Kč" }
+                ]
+            },
+            {
+                name: "Ristorante Corso",
+                type: "italská",
+                area: "centrum - blízko Česká",
+                address: "Veselá 10, Brno",
+                coordinates: { lat: 49.1937, lng: 16.6100 },
+                price: "€€€",
+                priceRange: "350-600 Kč",
+                phone: "+420 545 240 888",
+                hours: {
+                    1: "Zavřeno", 2: "17:00-23:00", 3: "17:00-23:00",
+                    4: "17:00-23:00", 5: "17:00-00:00", 6: "17:00-00:00", 0: "Zavřeno"
+                },
+                menu: [
+                    { name: "Bistecca alla Fiorentina", price: "495 Kč" },
+                    { name: "Risotto ai frutti di mare", price: "345 Kč" },
+                    { name: "Ossobuco alla Milanese", price: "425 Kč" }
+                ]
+            }
+        ];
+
+        let userLocation = null;
+        let sortByDistance = false;
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentTime').textContent = 
+                `📅 ${now.toLocaleDateString('cs-CZ', options)}`;
+        }
+
+        function isOpen(hours) {
+            const now = new Date();
+            const day = now.getDay();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            
+            const todayHours = hours[day];
+            if (todayHours === "Zavřeno") return false;
+            
+            const [open, close] = todayHours.split('-');
+            const [openHour, openMin] = open.split(':').map(Number);
+            const [closeHour, closeMin] = close.split(':').map(Number);
+            
+            const openTime = openHour * 60 + openMin;
+            const closeTime = closeHour * 60 + closeMin;
+            
+            return currentTime >= openTime && currentTime <= closeTime;
+        }
+
+        function getTodayHours(hours) {
+            const day = new Date().getDay();
+            return hours[day];
+        }
+
+        // Calculate distance between two coordinates using Haversine formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in kilometers
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                     Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function formatDistance(km) {
+            if (km < 1) {
+                return `${Math.round(km * 1000)} m`;
+            }
+            return `${km.toFixed(1)} km`;
+        }
+
+        function showLocationStatus(message, type = 'success') {
+            const status = document.getElementById('locationStatus');
+            status.textContent = message;
+            status.className = `location-status show ${type}`;
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 5000);
+        }
+
+        function getUserLocation() {
+            const btn = document.getElementById('nearMeBtn');
+            btn.textContent = '⏳ Zjišťuji polohu...';
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            if (!navigator.geolocation) {
+                showLocationStatus('❌ Tvůj prohlížeč nepodporuje geolokaci', 'error');
+                btn.textContent = '📍 Najít nejbližší';
+                btn.classList.remove('loading');
+                btn.disabled = false;
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    userLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    sortByDistance = true;
+                    
+                    // Calculate distances
+                    restaurants.forEach(r => {
+                        r.distance = calculateDistance(
+                            userLocation.lat,
+                            userLocation.lng,
+                            r.coordinates.lat,
+                            r.coordinates.lng
+                        );
+                    });
+
+                    showLocationStatus('✅ Poloha zjištěna! Restaurace seřazeny podle vzdálenosti.', 'success');
+                    btn.textContent = '✓ Seřazeno podle vzdálenosti';
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                    
+                    renderRestaurants();
+                },
+                (error) => {
+                    let errorMsg = '❌ Nepodařilo se získat polohu. ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg += 'Povol přístup k poloze v nastavení prohlížeče.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg += 'Informace o poloze nejsou dostupné.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg += 'Vypršel časový limit.';
+                            break;
+                        default:
+                            errorMsg += 'Zkus to znovu.';
+                    }
+                    showLocationStatus(errorMsg, 'error');
+                    btn.textContent = '📍 Najít nejbližší';
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                }
+            );
+        }
+
+        function renderRestaurants() {
+            const typeFilter = document.getElementById('typeFilter').value;
+            const priceFilter = document.getElementById('priceFilter').value;
+            const areaFilter = document.getElementById('areaFilter').value;
+            const openNowFilter = document.getElementById('openNowFilter').checked;
+
+            let filtered = restaurants.filter(r => {
+                if (typeFilter !== 'all' && r.type !== typeFilter) return false;
+                if (priceFilter !== 'all' && r.price !== priceFilter) return false;
+                if (areaFilter !== 'all' && r.area !== areaFilter) return false;
+                if (openNowFilter && !isOpen(r.hours)) return false;
+                return true;
+            });
+
+            // Sort by distance if user location is available
+            if (sortByDistance && userLocation) {
+                filtered.sort((a, b) => a.distance - b.distance);
+            }
+
+            const openCount = filtered.filter(r => isOpen(r.hours)).length;
+            document.getElementById('stats').textContent = 
+                `🍴 Zobrazeno ${filtered.length} restaurací | ✅ ${openCount} právě otevřeno`;
+
+            const grid = document.getElementById('restaurantsGrid');
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="no-results">😢 Žádné restaurace neodpovídají filtrům</div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(r => {
+                const open = isOpen(r.hours);
+                const todayHours = getTodayHours(r.hours);
+                const distanceBadge = r.distance ? 
+                    `<div class="distance-badge">📍 ${formatDistance(r.distance)}</div>` : '';
+                
+                return `
+                    <div class="restaurant-card ${open ? '' : 'closed'}">
+                        <div class="status-badge ${open ? 'open' : 'closed'}">
+                            ${open ? '✓ Otevřeno' : '✗ Zavřeno'}
+                        </div>
+                        ${distanceBadge}
+                        <div class="restaurant-header">
+                            <div class="restaurant-name">${r.name}</div>
+                            <div class="restaurant-type">${r.type.charAt(0).toUpperCase() + r.type.slice(1)} kuchyně</div>
+                        </div>
+                        <div class="restaurant-body">
+                            <div class="info-row">
+                                <div class="info-icon">📍</div>
+                                <div class="info-content">
+                                    <div class="info-label">Adresa</div>
+                                    <div class="info-text">${r.address}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row">
+                                <div class="info-icon">🕐</div>
+                                <div class="info-content">
+                                    <div class="info-label">Dnes otevřeno</div>
+                                    <div class="today-hours">${todayHours}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row">
+                                <div class="info-icon">💰</div>
+                                <div class="info-content">
+                                    <div class="info-label">Cena na osobu</div>
+                                    <div class="info-text">
+                                        <span class="price-indicator">${r.price}</span>
+                                        ${r.priceRange}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row">
+                                <div class="info-icon">📱</div>
+                                <div class="info-content">
+                                    <div class="info-label">Telefon</div>
+                                    <div class="info-text">${r.phone}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row">
+                                <div class="info-icon">🍽️</div>
+                                <div class="info-content">
+                                    <div class="info-label">Menu</div>
+                                    ${r.menu.map(m => `
+                                        <div class="menu-item">
+                                            <div class="menu-name">${m.name}</div>
+                                            <div class="menu-price">${m.price}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Event listeners
+        document.getElementById('typeFilter').addEventListener('change', renderRestaurants);
+        document.getElementById('priceFilter').addEventListener('change', renderRestaurants);
+        document.getElementById('areaFilter').addEventListener('change', renderRestaurants);
+        document.getElementById('openNowFilter').addEventListener('change', renderRestaurants);
+        document.getElementById('nearMeBtn').addEventListener('click', getUserLocation);
+
+        // Initialize
+        updateCurrentTime();
+        renderRestaurants();
+        setInterval(updateCurrentTime, 60000); // Update time every minute
+        setInterval(renderRestaurants, 60000); // Refresh open/closed status every minute
+    </script>
+</body>
+</html>
